@@ -149,14 +149,13 @@ Select `BirdSongs`, not the nested `Extracted/By_Date` directory: the importer r
 
 ## Doxygen and man pages
 
-The Python source contains Doxygen comments for each script, command-line entry point, and processing helper. With Doxygen installed, generate HTML and man-page output with:
+The Python source contains Doxygen comments for each script, command-line entry point, and processing helper. With Doxygen installed, generate the man pages with:
 
 ```bash
-mkdir -p docs/doxygen
-doxygen Doxyfile
+make man
 ```
 
-Generated files are written below `docs/doxygen/`. Man pages are generated from the same source comments as the HTML documentation.
+Generated man pages are written below `man/man3/`. Run `make man` to regenerate them, or `make clean-man` to remove the generated man directory.
 
 ## Limitations
 

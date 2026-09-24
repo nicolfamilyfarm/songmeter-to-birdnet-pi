@@ -1,0 +1,177 @@
+.TH "prepare_birdnet_go_import.py" 3 "Thu Sep 24 2026" "Song Meter to BirdNET-Go" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+prepare_birdnet_go_import.py \- Stage a BirdNET-Pi database and audio tree for BirdNET-Go import\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "def \fBprepare_birdnet_go_import\&.die\fP (message)"
+.br
+.RI "Print a fatal staging error and terminate\&. "
+.ti -1c
+.RI "def \fBprepare_birdnet_go_import\&.safe_component\fP (value, label)"
+.br
+.RI "Validate a database-derived path component before joining it\&. "
+.ti -1c
+.RI "def \fBprepare_birdnet_go_import\&.source_clip\fP (audio_root, date, common_name, file_name)"
+.br
+.RI "Find one detection's expected MP3 below the source audio root\&. "
+.ti -1c
+.RI "def \fBprepare_birdnet_go_import\&.read_rows\fP (database)"
+.br
+.RI "Read the fields needed to verify every database audio reference\&. "
+.ti -1c
+.RI "def \fBprepare_birdnet_go_import\&.main\fP ()"
+.br
+.RI "Parse arguments, validate inputs, copy the database and audio tree\&. "
+.in -1c
+.SH "Detailed Description"
+.PP 
+Stage a BirdNET-Pi database and audio tree for BirdNET-Go import\&. 
+
+BirdNET-Go expects the selected audio source directory itself to contain Extracted/By_Date\&. This utility creates a new, self-contained staging directory with BirdNET-Pi/scripts/birds\&.db and BirdSongs/Extracted/By_Date\&. It checks every detection's Date, Com_Name, and File_Name against the source audio tree before copying\&. Missing clips are reported but do not prevent the staging tree from being created\&. 
+.PP
+\fBCommand line\fP
+.RS 4
+
+.PP
+.nf
+python3 prepare_birdnet_go_import\&.py DATABASE AUDIO_ROOT OUTPUT_DIRECTORY
+
+.fi
+.PP
+ 
+.RE
+.PP
+\fBSafety rules\fP
+.RS 4
+DATABASE must be an existing SQLite database containing detections\&. AUDIO_ROOT must contain Extracted/By_Date\&. OUTPUT_DIRECTORY must not exist with contents; this prevents an accidental merge into an unrelated export\&. 
+.RE
+.PP
+\fBWarning\fP
+.RS 4
+The script copies the database and the complete Extracted tree\&. It does not delete or modify the source files\&. 
+.RE
+.PP
+
+.PP
+Definition in file \fBprepare_birdnet_go_import\&.py\fP\&.
+.SH "Function Documentation"
+.PP 
+.SS "def prepare_birdnet_go_import\&.die ( message)"
+
+.PP
+Print a fatal staging error and terminate\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fImessage\fP Human-readable diagnostic\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Always raised with status 1\&. 
+.RE
+.PP
+
+.PP
+Definition at line 33 of file prepare_birdnet_go_import\&.py\&.
+.SS "def prepare_birdnet_go_import\&.main ()"
+
+.PP
+Parse arguments, validate inputs, copy the database and audio tree\&. 
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for invalid arguments, missing inputs, a nonempty output directory, or an unreadable database\&.
+.RE
+.PP
+Prints counts for checked, found, and missing clips\&. Missing clips are warnings because BirdNET-Go can still import the corresponding detections\&. 
+.PP
+Definition at line 103 of file prepare_birdnet_go_import\&.py\&.
+.SS "def prepare_birdnet_go_import\&.read_rows ( database)"
+
+.PP
+Read the fields needed to verify every database audio reference\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIdatabase\fP Readable SQLite birds\&.db path\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+List of (Date, Com_Name, File_Name) tuples\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when the database cannot be opened or lacks the detections table/columns\&. 
+.RE
+.PP
+
+.PP
+Definition at line 81 of file prepare_birdnet_go_import\&.py\&.
+.SS "def prepare_birdnet_go_import\&.safe_component ( value,  label)"
+
+.PP
+Validate a database-derived path component before joining it\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIvalue\fP Candidate date, species directory, or filename component\&. 
+.br
+\fIlabel\fP Component name used in diagnostics\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The original component as a string\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for blank, dot-directory, or slash-containing values\&. 
+.RE
+.PP
+
+.PP
+Definition at line 43 of file prepare_birdnet_go_import\&.py\&.
+.SS "def prepare_birdnet_go_import\&.source_clip ( audio_root,  date,  common_name,  file_name)"
+
+.PP
+Find one detection's expected MP3 below the source audio root\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIaudio_root\fP BirdSongs directory containing Extracted/By_Date\&. 
+.br
+\fIdate\fP Detection date stored in the database\&. 
+.br
+\fIcommon_name\fP Detection common name stored in the database\&. 
+.br
+\fIfile_name\fP MP3 basename stored in the database\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Existing clip Path, or None when it is absent\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when a database value is unsafe as a path component\&.
+.RE
+.PP
+Checks the exact common-name directory first, then the historical space-to-underscore/apostrophe-removal spelling used by BirdNET-Pi\&. 
+.PP
+Definition at line 59 of file prepare_birdnet_go_import\&.py\&.
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for Song Meter to BirdNET-Go from the source code\&.

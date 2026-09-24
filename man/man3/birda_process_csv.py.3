@@ -1,0 +1,428 @@
+.TH "birda_process_csv.py" 3 "Thu Sep 24 2026" "Song Meter to BirdNET-Go" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+birda_process_csv.py \- Merge detection CSVs, report species totals, and deduplicate 15-second blocks\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "def \fBbirda_process_csv\&.error\fP (message)"
+.br
+.RI "Report a CSV processing failure to stderr and terminate\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.find_csv_files\fP (root_path)"
+.br
+.RI "Discover CSV inputs in deterministic directory and filename order\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.open_reader\fP (csv_file)"
+.br
+.RI "Open a UTF-8 CSV for reading, accepting an optional byte-order mark\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.collect_fieldnames\fP (csv_files)"
+.br
+.RI "Collect the union of input headers while preserving first-seen order\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.get_first_non_empty_value\fP (row, field_candidates)"
+.br
+.RI "Resolve a CSV value from an ordered list of column aliases\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.get_species_value\fP (row)"
+.br
+.RI "Resolve species identity, preferring scientific-name aliases\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.get_common_name_value\fP (row)"
+.br
+.RI "Resolve the display name from supported common-name columns\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.get_confidence_value\fP (row)"
+.br
+.RI "Parse a confidence value from supported score columns\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.get_start_seconds_value\fP (row)"
+.br
+.RI "Parse the elapsed start offset from supported start-time columns\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.get_block_start_seconds\fP (start_seconds)"
+.br
+.RI "Compute the lower boundary of the containing 15-second block\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.write_deduped_csv\fP (input_path, output_path)"
+.br
+.RI "Keep the first row per source, species, and 15-second block\&. "
+.ti -1c
+.RI "def \fBbirda_process_csv\&.main\fP ()"
+.br
+.RI "Merge inputs, write a deduplicated CSV, and print species statistics\&. "
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "string \fBbirda_process_csv\&.OUTPUT_FILENAME\fP = 'birda_merged\&.csv'"
+.br
+.ti -1c
+.RI "string \fBbirda_process_csv\&.DEDUPED_OUTPUT_FILENAME\fP = 'birda_merged_15s_dedup\&.csv'"
+.br
+.ti -1c
+.RI "int \fBbirda_process_csv\&.BLOCK_SECONDS\fP = 15"
+.br
+.ti -1c
+.RI "tuple \fBbirda_process_csv\&.SPECIES_FIELDS\fP"
+.br
+.ti -1c
+.RI "tuple \fBbirda_process_csv\&.COMMON_NAME_FIELDS\fP"
+.br
+.ti -1c
+.RI "tuple \fBbirda_process_csv\&.CONFIDENCE_FIELDS\fP"
+.br
+.ti -1c
+.RI "tuple \fBbirda_process_csv\&.START_FIELDS\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Merge detection CSVs, report species totals, and deduplicate 15-second blocks\&. 
+
+Accepts a CSV path or directory tree\&. Writes birda_merged\&.csv and birda_merged_15s_dedup\&.csv in the working directory\&. Keeps the first row for each source file, species, and block without changing detection offsets\&. Input files are read in deterministic directory and filename order\&. The first output preserves the union of all input columns; the deduplicated output keeps the first usable row for each (File, species, 15-second block) key\&. Rows that cannot form a complete key pass through unchanged\&. Species statistics describe the merged input before deduplication\&. 
+.PP
+\fBCommand line\fP
+.RS 4
+
+.PP
+.nf
+python3 birda_process_csv\&.py /path/to/per-recording-csvs
+
+.fi
+.PP
+ 
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+\fBbirda_csv_to_birdnet\&.py\fP 
+.RE
+.PP
+
+.PP
+Definition in file \fBbirda_process_csv\&.py\fP\&.
+.SH "Function Documentation"
+.PP 
+.SS "def birda_process_csv\&.collect_fieldnames ( csv_files)"
+
+.PP
+Collect the union of input headers while preserving first-seen order\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcsv_files\fP Ordered input CSV paths\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Ordered list of distinct column names\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for inaccessible files or missing headers\&. 
+.RE
+.PP
+
+.PP
+Definition at line 124 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.error ( message)"
+
+.PP
+Report a CSV processing failure to stderr and terminate\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fImessage\fP Human-readable failure description\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Always raised with exit status 1\&. 
+.RE
+.PP
+
+.PP
+Definition at line 56 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.find_csv_files ( root_path)"
+
+.PP
+Discover CSV inputs in deterministic directory and filename order\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIroot_path\fP CSV file or directory to search recursively\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+List of input paths excluding this run's two output paths\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for an invalid path or an explicit generated output\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+Other directories' generated CSVs and unrelated CSV files are not excluded\&. 
+.RE
+.PP
+
+.PP
+Definition at line 66 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.get_block_start_seconds ( start_seconds)"
+
+.PP
+Compute the lower boundary of the containing 15-second block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIstart_seconds\fP Finite elapsed offset in seconds\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Integer block start, calculated by rounding down\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fIValueError\fP Raised for NaN\&. 
+.br
+\fIOverflowError\fP Raised for infinity\&. 
+.RE
+.PP
+
+.PP
+Definition at line 211 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.get_common_name_value ( row)"
+
+.PP
+Resolve the display name from supported common-name columns\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIrow\fP Detection CSV dictionary\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Stripped common name, or an empty string when absent\&. 
+.RE
+.PP
+
+.PP
+Definition at line 170 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.get_confidence_value ( row)"
+
+.PP
+Parse a confidence value from supported score columns\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIrow\fP Detection CSV dictionary\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+float, or None for an absent or unparseable value\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+Does not enforce finiteness or a zero-to-one range\&. 
+.RE
+.PP
+
+.PP
+Definition at line 178 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.get_first_non_empty_value ( row,  field_candidates)"
+
+.PP
+Resolve a CSV value from an ordered list of column aliases\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIrow\fP Dictionary produced by csv\&.DictReader\&. 
+.br
+\fIfield_candidates\fP Column names in preference order\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+First nonempty stripped value, or an empty string\&. 
+.RE
+.PP
+
+.PP
+Definition at line 147 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.get_species_value ( row)"
+
+.PP
+Resolve species identity, preferring scientific-name aliases\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIrow\fP Detection CSV dictionary\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Stripped species value, or an empty string when absent\&. 
+.RE
+.PP
+
+.PP
+Definition at line 163 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.get_start_seconds_value ( row)"
+
+.PP
+Parse the elapsed start offset from supported start-time columns\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIrow\fP Detection CSV dictionary\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Offset in seconds as float, or None when absent or unparseable\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+Does not reject negative or nonfinite offsets\&. 
+.RE
+.PP
+
+.PP
+Definition at line 194 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.main ()"
+
+.PP
+Merge inputs, write a deduplicated CSV, and print species statistics\&. Takes one CSV or directory argument\&. Species statistics describe the merged rows before deduplication, and existing output files are overwritten\&. 
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for invalid arguments or detected input failures\&. 
+.RE
+.PP
+
+.PP
+Definition at line 273 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.open_reader ( csv_file)"
+
+.PP
+Open a UTF-8 CSV for reading, accepting an optional byte-order mark\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcsv_file\fP Input CSV path\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Open text handle; the caller must close it\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when the file cannot be opened\&. 
+.RE
+.PP
+
+.PP
+Definition at line 108 of file birda_process_csv\&.py\&.
+.SS "def birda_process_csv\&.write_deduped_csv ( input_path,  output_path)"
+
+.PP
+Keep the first row per source, species, and 15-second block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIinput_path\fP Merged CSV to read\&. 
+.br
+\fIoutput_path\fP Deduplicated CSV path, opened with truncation\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Tuple (number of kept rows, number of removed rows)\&.
+.RE
+.PP
+Rows without a usable deduplication key pass through unchanged\&. Original offsets and confidence values are preserved; the highest-confidence row is not preferentially selected\&. 
+.PP
+\fBWarning\fP
+.RS 4
+Failures can leave a partial output; writes are not atomic\&. 
+.RE
+.PP
+
+.PP
+Definition at line 223 of file birda_process_csv\&.py\&.
+.SH "Variable Documentation"
+.PP 
+.SS "tuple birda_process_csv\&.COMMON_NAME_FIELDS"
+\fBInitial value:\fP
+.PP
+.nf
+1 =  (
+2     "Common name",
+3     "common name",
+4 )
+.fi
+.PP
+Definition at line 37 of file birda_process_csv\&.py\&.
+.SS "tuple birda_process_csv\&.CONFIDENCE_FIELDS"
+\fBInitial value:\fP
+.PP
+.nf
+1 =  (
+2     "Confidence",
+3     "confidence",
+4     "Score",
+5     "score",
+6 )
+.fi
+.PP
+Definition at line 41 of file birda_process_csv\&.py\&.
+.SS "tuple birda_process_csv\&.SPECIES_FIELDS"
+\fBInitial value:\fP
+.PP
+.nf
+1 =  (
+2     "Scientific name",
+3     "scientific name",
+4     "Species",
+5     "species",
+6     "Common name",
+7     "common name",
+8 )
+.fi
+.PP
+Definition at line 29 of file birda_process_csv\&.py\&.
+.SS "tuple birda_process_csv\&.START_FIELDS"
+\fBInitial value:\fP
+.PP
+.nf
+1 =  (
+2     "Start (s)",
+3     "start (s)",
+4 )
+.fi
+.PP
+Definition at line 47 of file birda_process_csv\&.py\&.
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for Song Meter to BirdNET-Go from the source code\&.

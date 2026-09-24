@@ -1,0 +1,127 @@
+.TH "birda_process_loop.py" 3 "Thu Sep 24 2026" "Song Meter to BirdNET-Go" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+birda_process_loop.py \- Recursively process WAV recordings through \fBbirda_process_wav\&.py\fP\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "def \fBbirda_process_loop\&.error\fP (message)"
+.br
+.RI "Report a batch setup failure to stderr and terminate\&. "
+.ti -1c
+.RI "def \fBbirda_process_loop\&.prompt_overwrite_existing_csvs\fP ()"
+.br
+.RI "Ask whether existing per-recording CSVs should be regenerated\&. "
+.ti -1c
+.RI "def \fBbirda_process_loop\&.main\fP ()"
+.br
+.RI "Discover WAVs and invoke the single-recording processor for each file\&. "
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "\fBbirda_process_loop\&.PROCESSOR\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Recursively process WAV recordings through \fBbirda_process_wav\&.py\fP\&. 
+
+Accepts one directory argument, prompts once about existing CSVs, processes sorted WAV paths sequentially, and exits nonzero if any child fails\&. Existing per-recording result CSVs are skipped unless the user answers yes to the overwrite prompt\&. A failed recording does not stop later recordings from being attempted; the final exit status reports whether any child failed\&. 
+.PP
+\fBCommand line\fP
+.RS 4
+
+.PP
+.nf
+python3 birda_process_loop\&.py /path/to/song-meter-export
+
+.fi
+.PP
+ 
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+\fBbirda_process_wav\&.py\fP 
+.RE
+.PP
+
+.PP
+Definition in file \fBbirda_process_loop\&.py\fP\&.
+.SH "Function Documentation"
+.PP 
+.SS "def birda_process_loop\&.error ( message)"
+
+.PP
+Report a batch setup failure to stderr and terminate\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fImessage\fP Human-readable failure description\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Always raised with exit status 1\&. 
+.RE
+.PP
+
+.PP
+Definition at line 32 of file birda_process_loop\&.py\&.
+.SS "def birda_process_loop\&.main ()"
+
+.PP
+Discover WAVs and invoke the single-recording processor for each file\&. Uses the current Python interpreter and continues after child failures\&. The printed Processed count includes skipped recordings and failed attempts\&. 
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for invalid arguments or one or more failed children\&. 
+.RE
+.PP
+
+.PP
+Definition at line 61 of file birda_process_loop\&.py\&.
+.SS "def birda_process_loop\&.prompt_overwrite_existing_csvs ()"
+
+.PP
+Ask whether existing per-recording CSVs should be regenerated\&. 
+.PP
+\fBReturns\fP
+.RS 4
+True for yes; False for no, an empty response, or end of input\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+Invalid responses repeat the prompt\&. 
+.RE
+.PP
+
+.PP
+Definition at line 40 of file birda_process_loop\&.py\&.
+.SH "Variable Documentation"
+.PP 
+.SS "birda_process_loop\&.PROCESSOR"
+\fBInitial value:\fP
+.PP
+.nf
+1 =  os\&.path\&.abspath(
+2     os\&.path\&.join(
+3         os\&.path\&.dirname(__file__),
+4         "birda_process_wav\&.py"
+5     )
+6 )
+.fi
+.PP
+Definition at line 21 of file birda_process_loop\&.py\&.
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for Song Meter to BirdNET-Go from the source code\&.

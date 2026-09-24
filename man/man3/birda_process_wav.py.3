@@ -1,0 +1,413 @@
+.TH "birda_process_wav.py" 3 "Thu Sep 24 2026" "Song Meter to BirdNET-Go" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+birda_process_wav.py \- Analyze one Song Meter WAV with Birda and enrich its detection CSV\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "def \fBbirda_process_wav\&.error\fP (message)"
+.br
+.RI "Report a command-line failure to stderr and terminate\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.parse_args\fP ()"
+.br
+.RI "Parse the WAV path and optional --skip-existing-csv flag\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.find_birda\fP ()"
+.br
+.RI "Locate Birda at the preferred installation path or on PATH\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.get_system_timezone\fP ()"
+.br
+.RI "Determine the host's IANA timezone using timedatectl or /etc/localtime\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.parse_wav_filename\fP (wav_file)"
+.br
+.RI "Parse the recorder prefix and local start time from a WAV basename\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.find_summary_file\fP (wav_file, prefix)"
+.br
+.RI "Locate PREFIX_Summary\&.txt one directory above the WAV directory\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.read_location\fP (summary_file, recording_start)"
+.br
+.RI "Read coordinates from the closest summary entry within 30 seconds\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.format_detection_time\fP (value)"
+.br
+.RI "Format a detection datetime, preserving nonzero fractional seconds\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.get_csv_file\fP (wav_file)"
+.br
+.RI "Derive the sibling Birda results CSV path from a WAV path\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.add_metadata_to_csv\fP (csv_file, latitude, longitude, recording_start, timezone)"
+.br
+.RI "Rewrite a results CSV with coordinates and derived detection timestamps\&. "
+.ti -1c
+.RI "def \fBbirda_process_wav\&.main\fP ()"
+.br
+.RI "Run single-WAV analysis and metadata enrichment from command-line arguments\&. "
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "float \fBbirda_process_wav\&.MIN_CONFIDENCE\fP = 0\&.5"
+.br
+.ti -1c
+.RI "int \fBbirda_process_wav\&.MAX_SUMMARY_TIME_DIFFERENCE\fP = 30"
+.br
+.ti -1c
+.RI "string \fBbirda_process_wav\&.ORT_LIBRARY\fP = '/opt/birda/lib/libonnxruntime\&.so'"
+.br
+.ti -1c
+.RI "string \fBbirda_process_wav\&.BIRDA_PREFERRED\fP = '/opt/birda/bin/birda'"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Analyze one Song Meter WAV with Birda and enrich its detection CSV\&. 
+
+Reads PREFIX_YYYYMMDD_HHMMSS\&.wav and the recorder's summary one directory above the WAV directory\&. Updates the sibling \&.BirdNET\&.results\&.csv with coordinates, recording-local detection times, and the host timezone\&. The Birda invocation uses the CPU, a 0\&.50 confidence threshold, and the recorder's latitude/longitude\&. The generated CSV is replaced atomically after its rows have been validated and enriched\&. 
+.PP
+\fBCommand line\fP
+.RS 4
+
+.PP
+.nf
+python3 birda_process_wav\&.py [--skip-existing-csv] recording\&.wav
+
+.fi
+.PP
+ 
+.RE
+.PP
+\fBRequired recording layout\fP
+.RS 4
+A recording such as Track/Data/4952_20260126_201400\&.wav must have Track/4952_Summary\&.txt beside the Data directory\&. The summary must contain DATE, TIME, LAT, NS, LON, and EW columns\&. 
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+\fBbirda_process_loop\&.py\fP 
+.RE
+.PP
+
+.PP
+Definition in file \fBbirda_process_wav\&.py\fP\&.
+.SH "Function Documentation"
+.PP 
+.SS "def birda_process_wav\&.add_metadata_to_csv ( csv_file,  latitude,  longitude,  recording_start,  timezone)"
+
+.PP
+Rewrite a results CSV with coordinates and derived detection timestamps\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcsv_file\fP Existing Birda results CSV, replaced after successful processing\&. 
+.br
+\fIlatitude\fP Signed latitude in decimal degrees\&. 
+.br
+\fIlongitude\fP Signed longitude in decimal degrees\&. 
+.br
+\fIrecording_start\fP Naive recording-local datetime from the WAV basename\&. 
+.br
+\fItimezone\fP IANA timezone label written to every row\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Number of enriched detection rows\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for CSV validation failures\&. 
+.br
+\fIOSError\fP Raised for unhandled write or replacement failures\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+detection_time equals recording_start plus the row's Start (s)\&. 
+.RE
+.PP
+\fBWarning\fP
+.RS 4
+Validation exits can leave the fixed \&.tmp file behind\&.
+.RE
+.PP
+.PP
+.nf
+Add/fill:
+
+    lat
+    lon
+    detection_time
+    timezone
+
+detection_time is:
+
+    recording_start + Start (s)
+
+Example:
+
+    2026-01-26 20:14:33
+    Australia/Sydney
+.fi
+.PP
+ 
+.PP
+Definition at line 345 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.error ( message)"
+
+.PP
+Report a command-line failure to stderr and terminate\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fImessage\fP Human-readable failure description\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Always raised with exit status 1\&. 
+.RE
+.PP
+
+.PP
+Definition at line 40 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.find_birda ()"
+
+.PP
+Locate Birda at the preferred installation path or on PATH\&. 
+.PP
+\fBReturns\fP
+.RS 4
+Executable path suitable for subprocess\&.run\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when no Birda executable is available\&. 
+.RE
+.PP
+
+.PP
+Definition at line 65 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.find_summary_file ( wav_file,  prefix)"
+
+.PP
+Locate PREFIX_Summary\&.txt one directory above the WAV directory\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIwav_file\fP Recording path, normally Track/Data/recording\&.wav\&. 
+.br
+\fIprefix\fP Recorder identifier parsed from the WAV basename\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Existing summary file path\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when the expected summary does not exist\&.
+.RE
+.PP
+.PP
+.nf
+Given:
+
+    .../Track/Data/4952_20260126_201400.wav
+
+Find:
+
+    .../Track/4952_Summary.txt
+.fi
+.PP
+ 
+.PP
+Definition at line 184 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.format_detection_time ( value)"
+
+.PP
+Format a detection datetime, preserving nonzero fractional seconds\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIvalue\fP datetime to format without a timezone suffix\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+YYYY-MM-DD HH:MM:SS with fractional seconds when needed\&. 
+.RE
+.PP
+
+.PP
+Definition at line 316 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.get_csv_file ( wav_file)"
+
+.PP
+Derive the sibling Birda results CSV path from a WAV path\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIwav_file\fP Source recording path\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Path with the WAV extension replaced by \&.BirdNET\&.results\&.csv\&. 
+.RE
+.PP
+
+.PP
+Definition at line 328 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.get_system_timezone ()"
+
+.PP
+Determine the host's IANA timezone using timedatectl or /etc/localtime\&. 
+.PP
+\fBReturns\fP
+.RS 4
+Timezone name such as Australia/Sydney\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when neither lookup supplies a timezone\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+This identifies the processing host's timezone, not the recorder's\&.
+.RE
+.PP
+.PP
+.nf
+Return the machine's configured IANA timezone.
+
+On RHEL this will normally come from systemd/timedatectl,
+for example:
+
+    Australia/Sydney
+.fi
+.PP
+ 
+.PP
+Definition at line 81 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.main ()"
+
+.PP
+Run single-WAV analysis and metadata enrichment from command-line arguments\&. Validates source metadata and dependencies, runs Birda synchronously, and enriches its CSV\&. --skip-existing-csv checks existence only\&. 
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for argument, metadata, dependency, or Birda failures\&. 
+.RE
+.PP
+
+.PP
+Definition at line 468 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.parse_args ()"
+
+.PP
+Parse the WAV path and optional --skip-existing-csv flag\&. 
+.PP
+\fBReturns\fP
+.RS 4
+argparse\&.Namespace containing wav_file and skip_existing_csv\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for help or invalid command-line arguments\&. 
+.RE
+.PP
+
+.PP
+Definition at line 48 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.parse_wav_filename ( wav_file)"
+
+.PP
+Parse the recorder prefix and local start time from a WAV basename\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIwav_file\fP Path named PREFIX_YYYYMMDD_HHMMSS\&.wav; extension is case-insensitive\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Tuple (recorder prefix, naive datetime recording_start)\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for an invalid filename or calendar timestamp\&.
+.RE
+.PP
+.PP
+.nf
+Expected filename:
+
+    4952_20260126_201400.wav
+
+Returns:
+
+    prefix = 4952
+    recording_start = 2026-01-26 20:14:00
+.fi
+.PP
+ 
+.PP
+Definition at line 140 of file birda_process_wav\&.py\&.
+.SS "def birda_process_wav\&.read_location ( summary_file,  recording_start)"
+
+.PP
+Read coordinates from the closest summary entry within 30 seconds\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIsummary_file\fP UTF-8 CSV summary with DATE, TIME, LAT, NS, LON, and EW\&. 
+.br
+\fIrecording_start\fP Naive recording-local datetime parsed from the WAV\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Tuple (signed latitude, signed longitude, matched datetime, difference in seconds)\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for invalid metadata or no sufficiently close entry\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+Equidistant entries retain the first match in file order\&.
+.RE
+.PP
+.PP
+.nf
+Find the summary entry closest to the recording start time.
+.fi
+.PP
+ 
+.PP
+Definition at line 215 of file birda_process_wav\&.py\&.
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for Song Meter to BirdNET-Go from the source code\&.

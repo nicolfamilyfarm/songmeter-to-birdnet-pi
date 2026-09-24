@@ -1,0 +1,113 @@
+.TH "birda_csv_to_birdnet.Output" 3 "Thu Sep 24 2026" "Song Meter to BirdNET-Go" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+birda_csv_to_birdnet.Output \- Provide optional ANSI styling for progress and error messages\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "def \fB__init__\fP (self)"
+.br
+.RI "Detect whether terminal styling should be enabled\&. "
+.ti -1c
+.RI "def \fBpaint\fP (self, text, *styles)"
+.br
+.RI "Return text decorated with styles when styling is enabled\&. "
+.ti -1c
+.RI "def \fBsection\fP (self, title)"
+.br
+.RI "Print a styled section heading\&. "
+.in -1c
+.SS "Public Attributes"
+
+.in +1c
+.ti -1c
+.RI "\fBenabled\fP"
+.br
+.in -1c
+.SS "Static Public Attributes"
+
+.in +1c
+.ti -1c
+.RI "string \fBRESET\fP = '\\033[0m'"
+.br
+.ti -1c
+.RI "string \fBBOLD\fP = '\\033[1m'"
+.br
+.ti -1c
+.RI "string \fBDIM\fP = '\\033[2m'"
+.br
+.ti -1c
+.RI "string \fBRED\fP = '\\033[31m'"
+.br
+.ti -1c
+.RI "string \fBGREEN\fP = '\\033[32m'"
+.br
+.ti -1c
+.RI "string \fBYELLOW\fP = '\\033[33m'"
+.br
+.ti -1c
+.RI "string \fBBLUE\fP = '\\033[34m'"
+.br
+.ti -1c
+.RI "string \fBCYAN\fP = '\\033[36m'"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Provide optional ANSI styling for progress and error messages\&. 
+
+
+.PP
+.nf
+Small terminal-output helper with safe non-interactive fallbacks.
+.fi
+.PP
+.PP
+Styling is enabled only on interactive terminals and is disabled when NO_COLOR is present in the environment\&. 
+.PP
+Definition at line 65 of file birda_csv_to_birdnet\&.py\&.
+.SH "Member Function Documentation"
+.PP 
+.SS "def birda_csv_to_birdnet\&.Output\&.paint ( self,  text, * styles)"
+
+.PP
+Return text decorated with styles when styling is enabled\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItext\fP Value to convert to text\&. 
+.br
+\fIstyles\fP ANSI sequences to apply\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Styled or unstyled string\&. 
+.RE
+.PP
+
+.PP
+Definition at line 85 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.Output\&.section ( self,  title)"
+
+.PP
+Print a styled section heading\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItitle\fP Heading text\&. 
+.RE
+.PP
+
+.PP
+Definition at line 92 of file birda_csv_to_birdnet\&.py\&.
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for Song Meter to BirdNET-Go from the source code\&.

@@ -1,0 +1,622 @@
+.TH "birda_csv_to_birdnet.py" 3 "Thu Sep 24 2026" "Song Meter to BirdNET-Go" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+birda_csv_to_birdnet.py \- Export merged Birda detections as BirdNET-Pi SQL, SQLite, and optional MP3s\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.SS "Classes"
+
+.in +1c
+.ti -1c
+.RI "class \fBbirda_csv_to_birdnet\&.Output\fP"
+.br
+.RI "Provide optional ANSI styling for progress and error messages\&. "
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.error\fP (message)"
+.br
+.RI "Report an export failure to stderr and terminate\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.ask_yes_no\fP (prompt)"
+.br
+.RI "Ask a yes/no question, defaulting to no on an empty response\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.clip_location\fP (birdsongs_dir, common_name, confidence, detection_time, stream_id=None)"
+.br
+.RI "Derive the directory and MP3 basename expected by BirdNET-Pi\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.extract_mp3\fP (source_file, clip_path, start_seconds, overwrite)"
+.br
+.RI "Encode 15 seconds from an exact WAV offset using FFmpeg and libmp3lame\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.open_csv\fP (csv_path)"
+.br
+.RI "Open a UTF-8 detection CSV, accepting an optional byte-order mark\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.count_records_to_process\fP (csv_path, max_records)"
+.br
+.RI "Count the CSV records that will be imported\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.validate_columns\fP (fieldnames, csv_path)"
+.br
+.RI "Require the converter's expected detection and metadata columns\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.parse_required_float\fP (value, field_name, row_number)"
+.br
+.RI "Parse a required numeric CSV field with contextual error reporting\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.parse_optional_float\fP (value)"
+.br
+.RI "Parse optional numeric metadata, treating invalid text as missing\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.parse_recording_start\fP (source_file, row_number)"
+.br
+.RI "Parse a recording-local start timestamp from a WAV basename\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.parse_detection_time\fP (value, source_file, start_seconds, row_number)"
+.br
+.RI "Use explicit detection time or derive it from recording start plus offset\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.write_sql_dump\fP (conn, sql_path)"
+.br
+.RI "Serialize the staging database to a retained SQL file\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.load_database_from_sql\fP (sql_path, db_path)"
+.br
+.RI "Build a replacement SQLite database by executing the retained SQL\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.build_database\fP (csv_path, db_path, sql_path, birdsongs_dir, max_records, generate_mp3=False, overwrite_mp3=False, audio_stats=None, progress_total=0)"
+.br
+.RI "Import detections, optionally extract audio, retain SQL, and load SQLite\&. "
+.ti -1c
+.RI "def \fBbirda_csv_to_birdnet\&.main\fP ()"
+.br
+.RI "Validate export arguments, prompt for audio options, and run the import\&. "
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "string \fBbirda_csv_to_birdnet\&.INPUT_FILENAME\fP = 'birda_merged_15s_dedup\&.csv'"
+.br
+.ti -1c
+.RI "string \fBbirda_csv_to_birdnet\&.OUTPUT_DB_NAME\fP = 'birds\&.db'"
+.br
+.ti -1c
+.RI "string \fBbirda_csv_to_birdnet\&.OUTPUT_SQL_NAME\fP = 'birds\&.sql'"
+.br
+.ti -1c
+.RI "int \fBbirda_csv_to_birdnet\&.CLIP_SECONDS\fP = 15"
+.br
+.ti -1c
+.RI "string \fBbirda_csv_to_birdnet\&.BIRDNET_PI_DIR_NAME\fP = 'BirdNET\-Pi'"
+.br
+.ti -1c
+.RI "string \fBbirda_csv_to_birdnet\&.BIRDNET_PI_SCRIPTS_DIR_NAME\fP = 'scripts'"
+.br
+.ti -1c
+.RI "string \fBbirda_csv_to_birdnet\&.BIRDSONGS_DIR_NAME\fP = 'BirdSongs'"
+.br
+.ti -1c
+.RI "tuple \fBbirda_csv_to_birdnet\&.REQUIRED_COLUMNS\fP"
+.br
+.ti -1c
+.RI "\fBbirda_csv_to_birdnet\&.WAV_FILENAME_RE\fP = re\&.compile(r'^([^_]+)_(\\d{8})_(\\d{6})\\\&.wav$', re\&.IGNORECASE)"
+.br
+.ti -1c
+.RI "\fBbirda_csv_to_birdnet\&.OUTPUT\fP = Output()"
+.br
+.ti -1c
+.RI "string \fBbirda_csv_to_birdnet\&.SCHEMA\fP"
+.br
+.ti -1c
+.RI "tuple \fBbirda_csv_to_birdnet\&.INSERT_SQL\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Export merged Birda detections as BirdNET-Pi SQL, SQLite, and optional MP3s\&. 
+
+Takes an output directory and maximum record count (zero means all)\&. Reads birda_merged_15s_dedup\&.csv from the working directory\&. Prompts for MP3 generation and replacement; birds\&.sql and birds\&.db are always rebuilt\&. The database schema follows the BirdNET-Pi detections table\&. When audio is requested, each imported observation gets a 15-second clip beginning at its exact Start (s) offset; short tails are padded with silence\&. Source WAV paths in the CSV are resolved relative to the CSV directory\&. 
+.PP
+\fBCommand line\fP
+.RS 4
+
+.PP
+.nf
+python3 birda_csv_to_birdnet\&.py OUTPUT_DIRECTORY MAX_RECORDS
+
+.fi
+.PP
+ 
+.RE
+.PP
+\fBOutput tree\fP
+.RS 4
+The output contains BirdNET-Pi/scripts/birds\&.db, birds\&.sql, and BirdSongs/Extracted/By_Date/YYYY-MM-DD/Common_Name/*\&.mp3 when audio is generated\&. The companion staging script can turn these into an unambiguous BirdNET-Go import directory\&. 
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+\fBbirda_process_csv\&.py\fP 
+.PP
+\fBprepare_birdnet_go_import\&.py\fP 
+.PP
+test_birda_csv_to_birdnet\&.py 
+.RE
+.PP
+
+.PP
+Definition in file \fBbirda_csv_to_birdnet\&.py\fP\&.
+.SH "Function Documentation"
+.PP 
+.SS "def birda_csv_to_birdnet\&.ask_yes_no ( prompt)"
+
+.PP
+Ask a yes/no question, defaulting to no on an empty response\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIprompt\fP Question text without the answer suffix\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+True for yes or False for no; invalid responses repeat the prompt\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when input ends before a response is received\&. 
+.RE
+.PP
+
+.PP
+Definition at line 141 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.build_database ( csv_path,  db_path,  sql_path,  birdsongs_dir,  max_records,  generate_mp3 = \fCFalse\fP,  overwrite_mp3 = \fCFalse\fP,  audio_stats = \fCNone\fP,  progress_total = \fC0\fP)"
+
+.PP
+Import detections, optionally extract audio, retain SQL, and load SQLite\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcsv_path\fP Merged detection CSV; relative WAV paths resolve against its directory\&. 
+.br
+\fIdb_path\fP Destination birds\&.db path with an existing parent directory\&. 
+.br
+\fIsql_path\fP Retained SQL path with an existing parent directory\&. 
+.br
+\fIbirdsongs_dir\fP Root for BirdNET-Pi's Extracted/By_Date audio hierarchy\&. 
+.br
+\fImax_records\fP Positive row limit, or zero/None to import all rows\&. 
+.br
+\fIgenerate_mp3\fP Whether to encode audio for imported observations\&. 
+.br
+\fIoverwrite_mp3\fP Whether existing audio destinations may be replaced\&. 
+.br
+\fIaudio_stats\fP Optional dict populated with final MP3 counts\&. 
+.br
+\fIprogress_total\fP Total records selected for import\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Number of imported rows\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for detected CSV or audio validation failures\&. 
+.br
+\fIsqlite3\&.Error\fP Raised for database failures\&. 
+.br
+\fIOSError\fP Raised for unhandled filesystem failures\&.
+.RE
+.PP
+File_Name always stores the derived MP3 basename, even when encoding is disabled\&. Audio is written before the SQL and database are published\&. 
+.PP
+\fBWarning\fP
+.RS 4
+Collision prefixes depend on CSV order and are not persisted as source IDs\&. 
+.RE
+.PP
+
+.PP
+Definition at line 407 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.clip_location ( birdsongs_dir,  common_name,  confidence,  detection_time,  stream_id = \fCNone\fP)"
+
+.PP
+Derive the directory and MP3 basename expected by BirdNET-Pi\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIbirdsongs_dir\fP Export's BirdSongs root directory\&. 
+.br
+\fIcommon_name\fP Display name; spaces become underscores and apostrophes are removed\&. 
+.br
+\fIconfidence\fP Finite detection probability between zero and one\&. 
+.br
+\fIdetection_time\fP Observation datetime supplying the date and whole-second time\&. 
+.br
+\fIstream_id\fP Optional numeric RTSP prefix used to distinguish filename collisions\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Tuple (Extracted/By_Date/date/species directory, MP3 basename)\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when the common name is unsafe as a directory component\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+This function derives paths only; it does not create directories or files\&. 
+.RE
+.PP
+
+.PP
+Definition at line 163 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.count_records_to_process ( csv_path,  max_records)"
+
+.PP
+Count the CSV records that will be imported\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcsv_path\fP Source detection CSV\&. 
+.br
+\fImax_records\fP Positive import limit, or zero for all records\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Number of records selected for import\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for an invalid or unreadable CSV header\&. 
+.RE
+.PP
+
+.PP
+Definition at line 240 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.error ( message)"
+
+.PP
+Report an export failure to stderr and terminate\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fImessage\fP Human-readable failure description\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Always raised with exit status 1\&. 
+.RE
+.PP
+
+.PP
+Definition at line 132 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.extract_mp3 ( source_file,  clip_path,  start_seconds,  overwrite)"
+
+.PP
+Encode 15 seconds from an exact WAV offset using FFmpeg and libmp3lame\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIsource_file\fP Existing source WAV path\&. 
+.br
+\fIclip_path\fP Destination MP3 path whose parent directory must already exist\&. 
+.br
+\fIstart_seconds\fP Finite non-negative elapsed offset, not a rounded deduplication block\&. 
+.br
+\fIoverwrite\fP Whether to replace an existing destination\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+True when generated; False when an existing destination is retained\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for a missing source or handled encoding/write failure\&. 
+.br
+\fIOSError\fP Raised if temporary-file creation or cleanup fails\&.
+.RE
+.PP
+Pads short tails with silence and replaces a destination only after successful encoding\&. Existing destinations are not validated when skipped\&. 
+.PP
+Definition at line 189 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.load_database_from_sql ( sql_path,  db_path)"
+
+.PP
+Build a replacement SQLite database by executing the retained SQL\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIsql_path\fP SQL script previously written by write_sql_dump\&. 
+.br
+\fIdb_path\fP Destination database path; an existing database is replaced on success\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fIsqlite3\&.Error\fP Raised for SQL execution or database failures\&. 
+.br
+\fIOSError\fP Raised for filesystem failures\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+Loads the entire SQL file into memory and uses a fixed \&.tmp database path\&. 
+.RE
+.PP
+
+.PP
+Definition at line 373 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.main ()"
+
+.PP
+Validate export arguments, prompt for audio options, and run the import\&. Reads the fixed input CSV in the working directory and prints output paths and row counts\&. Existing SQL and database files are rebuilt on every run\&. 
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for invalid arguments, unavailable input, or handled failures\&. 
+.RE
+.PP
+
+.PP
+Definition at line 523 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.open_csv ( csv_path)"
+
+.PP
+Open a UTF-8 detection CSV, accepting an optional byte-order mark\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcsv_path\fP Input CSV path\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Open text handle; the caller must close it\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised when the input cannot be opened\&. 
+.RE
+.PP
+
+.PP
+Definition at line 228 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.parse_detection_time ( value,  source_file,  start_seconds,  row_number)"
+
+.PP
+Use explicit detection time or derive it from recording start plus offset\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIvalue\fP ISO-formatted detection datetime; blank or None enables the fallback\&. 
+.br
+\fIsource_file\fP WAV path whose basename supplies the fallback recording start\&. 
+.br
+\fIstart_seconds\fP Elapsed detection offset in seconds\&. 
+.br
+\fIrow_number\fP CSV line number used in diagnostics\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Parsed or derived datetime; no timezone conversion is performed\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for invalid explicit time or fallback filename\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+An explicit detection_time is not checked against the WAV offset\&. 
+.RE
+.PP
+
+.PP
+Definition at line 334 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.parse_optional_float ( value)"
+
+.PP
+Parse optional numeric metadata, treating invalid text as missing\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIvalue\fP Numeric text, blank text, or None\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Parsed float, or None for absent or unparseable values\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+No coordinate range or finiteness validation is performed\&. 
+.RE
+.PP
+
+.PP
+Definition at line 287 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.parse_recording_start ( source_file,  row_number)"
+
+.PP
+Parse a recording-local start timestamp from a WAV basename\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIsource_file\fP Path named PREFIX_YYYYMMDD_HHMMSS\&.wav\&. 
+.br
+\fIrow_number\fP CSV line number used in diagnostics\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Naive datetime representing the recording start\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for an invalid filename or calendar timestamp\&. 
+.RE
+.PP
+
+.PP
+Definition at line 306 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.parse_required_float ( value,  field_name,  row_number)"
+
+.PP
+Parse a required numeric CSV field with contextual error reporting\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIvalue\fP Text value to strip and convert\&. 
+.br
+\fIfield_name\fP Column label used in diagnostics\&. 
+.br
+\fIrow_number\fP CSV line number, counting the header as line one\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Parsed float; callers must separately check range and finiteness\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for missing or unparseable values\&. 
+.RE
+.PP
+
+.PP
+Definition at line 276 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.validate_columns ( fieldnames,  csv_path)"
+
+.PP
+Require the converter's expected detection and metadata columns\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIfieldnames\fP Header names from csv\&.DictReader, or None for an empty input\&. 
+.br
+\fIcsv_path\fP Source path used in diagnostics\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fISystemExit\fP Raised for a missing header or required column\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+Checks headers only, not individual row completeness or value types\&. 
+.RE
+.PP
+
+.PP
+Definition at line 258 of file birda_csv_to_birdnet\&.py\&.
+.SS "def birda_csv_to_birdnet\&.write_sql_dump ( conn,  sql_path)"
+
+.PP
+Serialize the staging database to a retained SQL file\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIconn\fP SQLite connection containing the schema and committed observations\&. 
+.br
+\fIsql_path\fP Destination SQL path; an existing file is replaced\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fIOSError\fP Raised for filesystem failures\&.
+.RE
+.PP
+Writes through a fixed sibling \&.tmp path before replacing the SQL file\&. This replacement is not transactional with the later database replacement\&. 
+.PP
+Definition at line 353 of file birda_csv_to_birdnet\&.py\&.
+.SH "Variable Documentation"
+.PP 
+.SS "tuple birda_csv_to_birdnet\&.INSERT_SQL"
+\fBInitial value:\fP
+.PP
+.nf
+1 =  (
+2     "INSERT INTO detections ("
+3     "Date, Time, Sci_Name, Com_Name, Confidence, Lat, Lon, Cutoff, Week, Sens, Overlap, File_Name, vocalization"
+4     ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+5 )
+.fi
+.PP
+Definition at line 122 of file birda_csv_to_birdnet\&.py\&.
+.SS "tuple birda_csv_to_birdnet\&.REQUIRED_COLUMNS"
+\fBInitial value:\fP
+.PP
+.nf
+1 =  (
+2     "Start (s)",
+3     "End (s)",
+4     "Scientific name",
+5     "Common name",
+6     "Confidence",
+7     "File",
+8     "lat",
+9     "lon",
+10     "detection_time",
+11     "timezone",
+12 )
+.fi
+.PP
+Definition at line 45 of file birda_csv_to_birdnet\&.py\&.
+.SS "string birda_csv_to_birdnet\&.SCHEMA"
+\fBInitial value:\fP
+.PP
+.nf
+1 =  """
+2 CREATE TABLE detections (
+3     Date DATE,
+4     Time TIME,
+5     Sci_Name VARCHAR(100) NOT NULL,
+6     Com_Name VARCHAR(100) NOT NULL,
+7     Confidence FLOAT,
+8     Lat FLOAT,
+9     Lon FLOAT,
+10     Cutoff FLOAT,
+11     Week INT,
+12     Sens FLOAT,
+13     Overlap FLOAT,
+14     File_Name VARCHAR(100) NOT NULL,
+15     vocalization TEXT
+16 );
+17 
+18 CREATE INDEX detections_Com_Name ON detections (Com_Name);
+19 CREATE INDEX detections_Sci_Name ON detections (Sci_Name);
+20 CREATE INDEX detections_Date_Time ON detections (Date DESC, Time DESC);
+21 """
+.fi
+.PP
+Definition at line 100 of file birda_csv_to_birdnet\&.py\&.
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for Song Meter to BirdNET-Go from the source code\&.

@@ -2,9 +2,6 @@
 __pycache__/
 *.py[cod]
 
-# Generated documentation
-docs/doxygen/
-
 # Generated Birda/BirdNET export data
 *.BirdNET.results.csv
 birda_merged*.csv
