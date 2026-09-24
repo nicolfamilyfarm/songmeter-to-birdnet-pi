@@ -1,0 +1,22 @@
+# Generated Python files
+__pycache__/
+*.py[cod]
+
+# Generated documentation
+docs/doxygen/
+
+# Generated Birda/BirdNET export data
+*.BirdNET.results.csv
+birda_merged*.csv
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+*.tar.gz
+*.wav
+*.mp3
+
+# Local staging/export data
+livedb/
+BirdNET-Pi/
+BirdSongs/
